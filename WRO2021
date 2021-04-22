@@ -1,0 +1,119 @@
+#!/usr/bin/env pybricks-micropython
+from pybricks.hubs import EV3Brick
+from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
+                                 InfraredSensor, UltrasonicSensor, GyroSensor)
+from pybricks.parameters import Port, Stop, Direction, Button, Color
+from pybricks.tools import wait, StopWatch, DataLog
+from pybricks.robotics import DriveBase
+from pybricks.media.ev3dev import SoundFile, ImageFile, Font
+
+
+
+ev3 = EV3Brick()
+
+ev3.speaker.beep()
+
+left_motor = Motor(Port.B)
+right_motor = Motor(Port.C)
+Lcolor = ColorSensor(Port.S1)
+Rcolor = ColorSensor(Port.S4)
+Usensor = UltrasonicSensor(Port.S2)
+
+robot = DriveBase(left_motor, right_motor, 55.5, 107)
+
+white = 27
+black = 6
+threshold = (black + white) / 2
+
+DRIVE_SPEED = 100
+PROPORTIONAL_GAIN = 1.2
+
+tiny_font = Font(size=12)
+ev3.screen.set_font(tiny_font)
+
+def riding(speed, distance, kof):
+    robot.reset()
+    while robot.distance() <= distance:
+        deviation = Lcolor.reflection() - Rcolor.reflection()
+        turn_rate = kof * deviation
+        robot.drive(speed, turn_rate)
+    robot.stop()
+
+# line_following_dist(100, 2000, 1.2)
+
+def riding_with_stop(speed, kof):
+    score = -1
+    cross_score = 0
+    while True:
+        deviation = Lcolor.reflection() - Rcolor.reflection()
+        turn_rate = kof * deviation
+        robot.drive(speed, turn_rate)
+        if Rcolor.reflection() < 10 or Lcolor.reflection() < 10:
+            robot.straight(50)
+            break
+    robot.stop()
+
+
+def GetCar(direction):
+    if direction > 0:
+        robot.turn(90)
+        robot.straight(100)
+        robot.straight(-100)
+        robot.turn(90)
+    else:
+        robot.turn(-90)
+        robot.straight(100)
+        robot.straight(-100)
+        robot.turn(-90)
+
+
+garageinfo = [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0]
+
+
+def scan_1():
+    n = 4
+    while n < 8:
+        riding_with_stop(200, 1)
+        if Usensor.distance() < 140:
+            #add to list 0
+            garageinfo[n] = 0
+            ev3.speaker.beep()
+        else:
+            #add to list 1
+            garageinfo[n] = 1 
+        n += 1
+    robot.turn(180)   
+    n = 11
+    while n > 7:
+        riding_with_stop(200, 1)
+        if Usensor.distance() < 140:
+            #add to list 0
+            garageinfo[n] = 0
+            ev3.speaker.beep()
+        else:
+            #add to list 1
+            garageinfo[n] = 1
+        n -= 1    
+    
+    ev3.screen.draw_text(0, 0, garageinfo)
+    wait(10000)
+# def riding_with_stop(speed, kof, score):
+#     cross_score = 0
+#     while cross_score != score:
+#         deviation = Lcolor.reflection() - Rcolor.reflection()
+#         turn_rate = kof * deviation
+#         robot.drive(speed, turn_rate)
+#         if Rcolor.reflection() < 10 or Lcolor.reflection() < 10:
+#             robot.straight(60)
+#             cross_score += 1
+#             ev3dev.speaker.beep()
+#     robot.stop()
+
+# riding_with_stop(100, 1)
+# riding_with_stop(100, 1)
+# riding_with_stop(100, 1)
+# GetCar(0)
+# riding_with_stop(100, 1)
+# riding_with_stop(100, 1)
+# riding_with_stop(100, 1)
+scan_1()
