@@ -8,29 +8,120 @@ from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile, Font
 
 
-
 ev3 = EV3Brick()
+
 
 ev3.speaker.beep()
 
-left_motor = Motor(Port.B)
-right_motor = Motor(Port.C)
-Lcolor = ColorSensor(Port.S1)
+
+left_motor = Motor(Port.B) #левый мотор
+right_motor = Motor(Port.C) #правый
+center_motor = Motor(Port.A) #центральный
+Lcolor = ColorSensor(Port.S1) # левый колор 
 Rcolor = ColorSensor(Port.S4)
 Usensor = UltrasonicSensor(Port.S2)
 
+
 robot = DriveBase(left_motor, right_motor, 55.5, 107)
+
 
 white = 27
 black = 6
 threshold = (black + white) / 2
 
+
 DRIVE_SPEED = 100
 PROPORTIONAL_GAIN = 1.2
+
 
 tiny_font = Font(size=12)
 ev3.screen.set_font(tiny_font)
 
+
+garages = [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0] # 0 - закрыто, 1 - открыто
+
+
+def start(speed):
+    robot.turn(45)
+    robot.straight(speed)
+    robot.turn(45)
+    riding_with_stop(speed, 1)
+    riding_with_stop(speed, 1)
+
+
+def cleanGarage(): #сканируем F0-G1 и заканчиваем на F1
+    scan_1() # сканим
+    robot.turn(-90) # разворачиваемся на право
+    GetDropCar(0) # забираем красную машинку
+    robot.turn(90) # встаем по линии
+    riding_with_stop(100, 1) # едем до перекрестка А
+    
+    robot.turn(90) # все 4 строки для приезда к B0 
+    riding_with_stop(100, 1)
+    robot.turn(90)
+    riding_with_stop(100, 1)
+    
+    n = 0
+    if Usensor.distance() < 120: # Проверка двух кабинок, выгрузка красной, забирание синей и зеленой машинок
+        garages[n] = 0
+        garages[1] = 1
+        garages[2] = 1
+        garages[3] = 1
+        riding_with_stop(100, 1)
+        robot_turn(-90)
+        GetDropCar(1)
+        robot.turn(90)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+    else:
+        robot_turn(-90)
+        GetDropCar(1)
+        robot.turn(90)
+        scan_2()
+    robot.turn(-90)
+    GetDropCar(0) # Забирание синей
+    robot.turn(-90)
+    riding_with_stop(100, 1)
+    robot.turn(-90)
+    GetDropCar(3) # Забирание зеленой насквозь
+    robot.turn(90)
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1) # Приезд на перекресток А
+
+
+def dropOutside():
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1) # Проезжаем два перекрестка
+    robot.turn(90) # Поворачиваемся вправо
+    riding(100, 180, 1) # Доезжаем до перекрестка L 
+    robot.turn(-45)
+    GetDropCar(2)
+    robot.turn(45) # Выгрузили зеленую машинку на М0
+    riding_with_stop(100, 1)
+    robot.turn(-45)
+    GetDropCar(2) # Выгрузили синюю машинку на М1
+    robot.turn(-135) # Развернулись
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1)
+    robot.turn(-90)
+    riding_with_stop(100, 1) # Приехали до перекрестка К
+
+
+def scan_2():
+    n = 0
+    while n < 3:
+        riding_with_stop(200, 1)
+        if Usensor.distance() < 140:
+            #add to list 0
+            garages[n] = 0
+            ev3.speaker.beep()
+        else:
+            #add to list 1
+            garages[n] = 1 
+        n += 1
+
+    
 def riding(speed, distance, kof):
     robot.reset()
     while robot.distance() <= distance:
@@ -39,7 +130,6 @@ def riding(speed, distance, kof):
         robot.drive(speed, turn_rate)
     robot.stop()
 
-# line_following_dist(100, 2000, 1.2)
 
 def riding_with_stop(speed, kof):
     score = -1
@@ -54,20 +144,39 @@ def riding_with_stop(speed, kof):
     robot.stop()
 
 
-def GetCar(direction):
-    if direction > 0:
-        robot.turn(90)
-        robot.straight(100)
-        robot.straight(-100)
-        robot.turn(90)
-    else:
-        robot.turn(-90)
-        robot.straight(100)
-        robot.straight(-100)
-        robot.turn(-90)
+def open():
+    center_motor.run_angle(100, -100)
 
 
-garageinfo = [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0]
+def close():
+    center_motor.run_angle(100, 100)
+
+
+def GetDropCar(a):
+    if a = 0:
+        open()
+        riding(100, 100, 1)
+        robot.stop()
+        close()
+        robot.straight(-100)
+    elif a = 1:
+        riding(100, 100, 1)
+        robot.stop()
+        open()
+        robot.straight(-100)
+        close()
+    elif a = 2:
+        riding(100, 250, 1)
+        robot.stop()
+        open()
+        robot.straight(-50)
+        close()
+        robot.straight(-200)
+    else a = 3:
+        open()
+        riding(100, 75, 1)
+        close()
+        riding(100, 125, 1)
 
 
 def scan_1():
@@ -76,11 +185,11 @@ def scan_1():
         riding_with_stop(200, 1)
         if Usensor.distance() < 140:
             #add to list 0
-            garageinfo[n] = 0
+            garages[n] = 0
             ev3.speaker.beep()
         else:
             #add to list 1
-            garageinfo[n] = 1 
+            garages[n] = 1 
         n += 1
     robot.turn(180)   
     n = 11
@@ -88,32 +197,15 @@ def scan_1():
         riding_with_stop(200, 1)
         if Usensor.distance() < 140:
             #add to list 0
-            garageinfo[n] = 0
+            garages[n] = 0
             ev3.speaker.beep()
         else:
             #add to list 1
-            garageinfo[n] = 1
+            garages[n] = 1
         n -= 1    
     
-    ev3.screen.draw_text(0, 0, garageinfo)
+    ev3.screen.draw_text(0, 0, garages)
     wait(10000)
-# def riding_with_stop(speed, kof, score):
-#     cross_score = 0
-#     while cross_score != score:
-#         deviation = Lcolor.reflection() - Rcolor.reflection()
-#         turn_rate = kof * deviation
-#         robot.drive(speed, turn_rate)
-#         if Rcolor.reflection() < 10 or Lcolor.reflection() < 10:
-#             robot.straight(60)
-#             cross_score += 1
-#             ev3dev.speaker.beep()
-#     robot.stop()
 
-# riding_with_stop(100, 1)
-# riding_with_stop(100, 1)
-# riding_with_stop(100, 1)
-# GetCar(0)
-# riding_with_stop(100, 1)
-# riding_with_stop(100, 1)
-# riding_with_stop(100, 1)
+
 scan_1()
