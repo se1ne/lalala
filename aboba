@@ -1,0 +1,59 @@
+from config import WIDTH, HEIGHT
+# Создаём импорт
+import tkinter as tk
+# Импортируем
+
+def create_window(root=True):
+    if root:
+        return tk.Tk()
+    else:
+        return  tk.Toplevel()
+
+
+def window_title(master, title):
+    master.title(title)
+
+
+# noinspection PyProtectedMember
+def window_icon(master, icon_path):
+    master.tk.call('wm', 'iconphoto', master._w, tk.PhotoImage(file=icon_path))
+
+
+def center_window(master, width=WIDTH, height=HEIGHT):
+
+    pos_x = (master.winfo_screenwidth() - width) // 2
+    pos_y = (master.winfo_screenwidth() - height) // 2
+    master.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+
+
+def do_not_resizable(master, x=False, y=False):
+    master.resizable(x, y)
+
+
+def game_help():
+    help_window = create_window(root=False)
+    window_title(help_window, "Помощь")
+    window_icon(help_window, 'img\\icon.png')
+    center_window(help_window, 470, 130)
+    do_not_resizable(help_window)
+    help_text = ''''''
+    help_label = tk.Label(help_window, justify="left", text=help_text, padx=10, pady=10)
+    help_label.pack(anchor="nw")
+
+
+def mainloop(master):
+    master.mainloop()
+
+
+if __name__ == ' main ':
+    # Создаём окно
+    game_window = create_window()
+    # Заголовок окна
+    window_title(game_window, "Угадая слово")
+    # Меняем иконку в заголовке окна
+    window_icon(game_window, 'img\\icon.png')
+    # Задаём размеры окна и распологаем его по центру
+    center_window(game_window)
+    # Запрет изменения размеров окна
+    do_not_resizable(game_window)
+    mainloop(game_window)
