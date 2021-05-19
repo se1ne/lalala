@@ -19,6 +19,7 @@ right_motor = Motor(Port.C) #правый
 center_motor = Motor(Port.A) #центральный
 Lcolor = ColorSensor(Port.S1) # левый колор 
 Rcolor = ColorSensor(Port.S4)
+Mcolor = ColorSensor(Port.S3)
 Usensor = UltrasonicSensor(Port.S2)
 
 
@@ -41,7 +42,11 @@ ev3.screen.set_font(tiny_font)
 garages = [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0] # 0 - закрыто, 1 - открыто
 
 
-def start(speed):
+list_colors = [0, 0, 0, 0, 0, 0] # 0 - пусто, 1 - красн, 2 - син, 3 - зелен
+
+
+def start(speed): # выезд на начальный перекресток
+    pressed_button()
     robot.turn(45)
     robot.straight(speed)
     robot.turn(45)
@@ -49,7 +54,7 @@ def start(speed):
     riding_with_stop(speed, 1)
 
 
-def cleanGarage(): #сканируем F0-G1 и заканчиваем на F1
+def cleanGarage(): # Зачистка нижней линии
     scan_1() # сканим
     robot.turn(-90) # разворачиваемся на право
     GetDropCar(0) # забираем красную машинку
@@ -90,96 +95,7 @@ def cleanGarage(): #сканируем F0-G1 и заканчиваем на F1
     riding_with_stop(100, 1) # Приезд на перекресток А
 
 
-def dropOutside():
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1) # Проезжаем два перекрестка
-    robot.turn(90) # Поворачиваемся вправо
-    riding(100, 180, 1) # Доезжаем до перекрестка L 
-    robot.turn(-45)
-    GetDropCar(2)
-    robot.turn(45) # Выгрузили зеленую машинку на М0
-    riding_with_stop(100, 1)
-    robot.turn(-45)
-    GetDropCar(2) # Выгрузили синюю машинку на М1
-    robot.turn(-135) # Развернулись
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1)
-    robot.turn(-90)
-    riding_with_stop(100, 1) # Приехали до перекрестка К
-
-
-def scan_2():
-    n = 0
-    while n < 3:
-        riding_with_stop(200, 1)
-        if Usensor.distance() < 140:
-            #add to list 0
-            garages[n] = 0
-            ev3.speaker.beep()
-        else:
-            #add to list 1
-            garages[n] = 1 
-        n += 1
-
-    
-def riding(speed, distance, kof):
-    robot.reset()
-    while robot.distance() <= distance:
-        deviation = Lcolor.reflection() - Rcolor.reflection()
-        turn_rate = kof * deviation
-        robot.drive(speed, turn_rate)
-    robot.stop()
-
-
-def riding_with_stop(speed, kof):
-    score = -1
-    cross_score = 0
-    while True:
-        deviation = Lcolor.reflection() - Rcolor.reflection()
-        turn_rate = kof * deviation
-        robot.drive(speed, turn_rate)
-        if Rcolor.reflection() < 10 or Lcolor.reflection() < 10:
-            robot.straight(50)
-            break
-    robot.stop()
-
-
-def open():
-    center_motor.run_angle(100, -100)
-
-
-def close():
-    center_motor.run_angle(100, 100)
-
-
-def GetDropCar(a):
-    if a = 0:
-        open()
-        riding(100, 100, 1)
-        robot.stop()
-        close()
-        robot.straight(-100)
-    elif a = 1:
-        riding(100, 100, 1)
-        robot.stop()
-        open()
-        robot.straight(-100)
-        close()
-    elif a = 2:
-        riding(100, 250, 1)
-        robot.stop()
-        open()
-        robot.straight(-50)
-        close()
-        robot.straight(-200)
-    else a = 3:
-        open()
-        riding(100, 75, 1)
-        close()
-        riding(100, 125, 1)
-
-
-def scan_1():
+def scan_1(): # Скан нижней линии
     n = 4
     while n < 8:
         riding_with_stop(200, 1)
@@ -208,4 +124,429 @@ def scan_1():
     wait(10000)
 
 
+def scan_2(): # Скан верхней линии
+    n = 0
+    while n < 3:
+        riding_with_stop(200, 1)
+        if Usensor.distance() < 140:
+            #add to list 0
+            garages[n] = 0
+            ev3.speaker.beep()
+        else:
+            #add to list 1
+            garages[n] = 1 
+        n += 1
+
+
+def dropOutside(): # Выгруз синей и зеленой машинок
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1) # Проезжаем два перекрестка
+    robot.turn(90) # Поворачиваемся вправо
+    riding(100, 180, 1) # Доезжаем до перекрестка L 
+    robot.turn(-45)
+    GetDropCar(2)
+    robot.turn(45) # Выгрузили зеленую машинку на М0
+    riding_with_stop(100, 1)
+    robot.turn(-45)
+    GetDropCar(2) # Выгрузили синюю машинку на М1
+    robot.turn(-135) # Развернулись
+    riding_with_stop(100, 1)
+    riding_with_stop(100, 1)
+    robot.turn(-90)
+    riding_with_stop(100, 1) # Приехали до перекрестка К
+
+    
+def riding(speed, distance, kof): # езда по линии на расстояние
+    robot.reset()
+    while robot.distance() <= distance:
+        deviation = Lcolor.reflection() - Rcolor.reflection()
+        turn_rate = kof * deviation
+        robot.drive(speed, turn_rate)
+    robot.stop()
+
+
+def riding_with_stop(speed, kof): # езда по линии до перекрестка
+    score = -1
+    cross_score = 0
+    while True:
+        deviation = Lcolor.reflection() - Rcolor.reflection()
+        turn_rate = kof * deviation
+        robot.drive(speed, turn_rate)
+        if Rcolor.reflection() < 10 or Lcolor.reflection() < 10:
+            robot.straight(50)
+            break
+    robot.stop()
+
+
+def open(): # открывает ковш
+    center_motor.run_angle(100, -100)
+
+
+def close(): # закрывает ковш
+    center_motor.run_angle(100, 100)
+
+
+def GetCar(a): # забирает машины из линии
+    robot.turn(-90)
+    if a == 0:
+        open()
+        robot.reset()
+        robot.straight(200)
+        WhatAColor()
+        robot.straight(100)
+        WhatAColor()
+        robot.straight(50)
+        close()
+        robot.straight(-robot.distance())
+    elif a == 1:
+        open()
+        robot.reset()
+        robot.straight(400)
+        WhatAColor()
+        robot.straight(120)
+        WhatAColor()
+        robot.straight(50)
+        close()
+        robot.straight(-robot.distance())
+        WhatAColor()
+    elif a == 2:
+        open()
+        robot.reset()
+        robot.straight(640)
+        WhatAColor()
+        robot.straight(100)
+        WhatAColor()
+        robot.straight(50)
+        close()
+        robot.straight(-robot.distance())
+        WhatAColor()
+    robot.turn(90)
+    riding_with_stop(100, 1)
+    
+
+def WhatAColor(): # определяем цвет машинок которые взяли
+    n = 0
+    color = Mcolor.color()
+    if color == Color.RED:
+        list_colors[n] = 1
+    elif color == Color.BLUE:
+        list_colors[n] = 2
+    elif color == Color.GREEN:
+        list_colors[n] = 3
+    n += 1
+
+
+def GetDropCar(a): # забирает/ставит машины из/в гараж
+    if a == 0:
+        open()
+        riding(100, 100, 1)
+        robot.stop()
+        close()
+        robot.straight(-100)
+    elif a == 1:
+        riding(100, 100, 1)
+        robot.stop()
+        open()
+        robot.straight(-50)
+        close()
+        robot.straight(-50)
+    elif a == 2:
+        riding(100, 250, 1)
+        robot.stop()
+        open()
+        robot.straight(-50)
+        close()
+        robot.straight(-200)
+    elif a == 3:
+        open()
+        riding(100, 75, 1)
+        close()
+        riding(100, 125, 1)
+
+
+def go_to_cross(a, b, c):
+    if a == 0:
+        robot.turn(-90)
+        riding_with_stop(100, 1)
+        robot.turn(90)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 1:
+        robot.turn(-90)
+        riding_with_stop(100, 1)
+        robot.turn(90)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+    
+    elif a == 2:
+        robot.turn(-90)
+        riding_with_stop(100, 1)
+        robot.turn(90)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 3:
+        robot.turn(-90)
+        riding_with_stop(100, 1)
+        robot.turn(90)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+                riding_with_stop(100, 1)
+                robot.turn(-90)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 4:
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 5:
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 6:
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+
+    elif a == 7:
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        riding_with_stop(100, 1)
+        if b == 0:
+            robot.turn(-90)
+            GetDropCar(1)
+            robot.turn(90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+        elif b == 1:
+            robot.turn(90)
+            GetDropCar(1)
+            robot.turn(-90)
+            if c == 0:
+                robot.turn(180)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                riding_with_stop(100, 1)
+                robot.turn(-180)
+            elif c == 1:
+                robot.stop()
+
+
+
+def pressed_button():
+    while True:
+        pressed = Button.CENTER in ev3.buttons.pressed()
+        if pressed:
+            break
+        
+
+def combos():
+    if list_colors[0] == 3 and [1] == 2:
+        riding_with_stop(100, 1)
+        robot.turn(-90)
+        GetDropCar(1)
+        if garages[4] == 1:
+            robot.turn(180)
+            GetDropCar(4)
+            robot.turn(90)
+            garages[4] = 0
+
+        elif garages[2] == 1:
+            robot.turn(90)
+            riding_with_stop(100, 1)
+            riding_with_stop(100, 1)
+            robot.turn(-90)
+            riding_with_stop(100, 1)
+            GetDropCar(4)
+            robot.turn(-90)
+            riding_with_stop(100, 1)
+            riding_with_stop(100, 1)
+            riding_with_stop(100, 1)
+            robot.turn(-90)
+            riding_with_stop(100, 1)
+            robot.turn(-90)
+            garages[7] = 0
+        
 scan_1()
