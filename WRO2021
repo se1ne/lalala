@@ -1,182 +1,324 @@
 #!/usr/bin/env pybricks-micropython
 from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
-                                 InfraredSensor, UltrasonicSensor, GyroSensor)
+from pybricks.ev3devices import (Motor, ColorSensor, UltrasonicSensor)
 from pybricks.parameters import Port, Stop, Direction, Button, Color
-from pybricks.tools import wait, StopWatch, DataLog
+from pybricks.tools import wait
 from pybricks.robotics import DriveBase
-from pybricks.media.ev3dev import SoundFile, ImageFile, Font
+from pybricks.media.ev3dev import Font
 
 
 ev3 = EV3Brick()
 
+goColor1 = []
+goColor2 = []
 
-ev3.speaker.beep()
-
+list_colors = ['',''] 
 
 left_motor = Motor(Port.B) #левый мотор
-right_motor = Motor(Port.C) #правый
-center_motor = Motor(Port.A) #центральный
-center1_motor = Motor(Port.D) #еще один
+right_motor = Motor(Port.A) #правый
+center_motor = Motor(Port.C) #центральный
+# center1_motor = Motor(Port.D) #еще один
 
-Lcolor = ColorSensor(Port.S1) # левый колор 
-Rcolor = ColorSensor(Port.S4)
-Mcolor = ColorSensor(Port.S3)
+Lcolor = ColorSensor(Port.S3) # левый колор 
+Rcolor = ColorSensor(Port.S1)
+Mcolor = ColorSensor(Port.S2)
 
-Usensor = UltrasonicSensor(Port.S2)
+Usensor = UltrasonicSensor(Port.S4)
 
-
-robot = DriveBase(left_motor, right_motor, 55.5, 130)
-robot.settings(turn_rate=600,turn_acceleration=300)
-
+robot = DriveBase(left_motor, right_motor, 55.5, 152)
+robot.settings(turn_rate=500,turn_acceleration=250)
 
 white = 100
-black = 14
+black = 4
 #threshold = (black + white) / 2
-grey = black + 5
+grey = black + 9
+
+garages = {
+    0:[1,'left','red'],
+    1:[2,'left','red'],
+    2:[3,'left','green'],
+    3:[4,'left','blue'],
+    4:[1,'right','green',5,'left'],
+    5:[2,'right','red',6,'left'],
+    6:[3,'right','green',7,'left'],
+    7:[4,'right','blue',8,'left'],
+    8:[5,'right','blue'],
+    9:[6,'right','blue'],
+    10:[7,'right','red'],
+    11:[8,'right','green'],
+}
+
+def combo (c1,c2):
+
+    del goColor1[:]
+    del goColor2[:]
+
+    g1 = [] # для всех свободных гаражей c1 цвета
+    g2 = [] # для всех свободных гаражей c2 цвета
+    list = [] # список всех сочитаний по парам
+    
+    on_cross_2 = [] # список совпадений на перекрестке 2 линии
+    on_cross_1 = [] # список совпадений на перекрестке 1 линии
+    on_line_2 = [] # список совпадений на 2 линии
+    on_line_1 = [] # список совпадений на 1 линии
+    on_lines = [] # совпадения на разных линиях
+    
+
+    
+    for k, v in garages.items(): # перебираем подходящие гаражи
+        if c1 in v[2]: # c1 есть среди названий цветов в списке <номер гаража>:[... , ... , 'blue' ]
+            g1.append(k) # добавляем его в список доступных гаражей этого цвета
+            # print(k, v[0],v[1])
+        if c2 in v[2]:
+            g2.append(k) 
+
+    for i in g1: # создаем все возможные комбинации
+        for j in g2:
+            #if i > 3 and j > 3:
+            list.append(i)
+            list.append(j)
+           
+    a = 0
+    b = 1
+    while a < len(list): # len(list) - это количество значений(гаражей) в списке list
+      c = abs(list[a] - list[b]) # если есть разница между гаражами в 4 единицы, то они на одном перекрестке
+      #print(c)
+      if c == 4: # если есть разница между гаражами в 4 единицы, то они на одном перекрестке
+        if list[a] > 3 and list[b] > 3:
+            on_cross_2.append(list[a])
+            on_cross_2.append(list[b])
+        else:
+            on_cross_1.append(list[a])
+            on_cross_1.append(list[b])
+      elif list[a] > 3 and list[b] > 3: # если гаражи больше 3, то значит они на 2 линии
+        if list[a] != list[b]:
+            on_line_2.append(list[a])
+            on_line_2.append(list[b])
+      elif list[a] < 8 and list[b] < 8: # если меньше 8, то они на 1 линии
+        if list[a] != list[b]:
+            on_line_1.append(list[a])
+            on_line_1.append(list[b])
+      else: # тут все остальное. то что на разных линиях
+            on_lines.append(list[a])
+            on_lines.append(list[b])
+      a += 2
+      b += 2
+    
+    if on_cross_2:
+        if on_cross_2[0] < 8:
+            goColor1.append(garages[on_cross_2[0]][3])
+            goColor1.append(garages[on_cross_2[0]][4])
+        else:
+            goColor1.append(garages[on_cross_2[0]][0])
+            goColor1.append(garages[on_cross_2[0]][1])
+        if on_cross_2[1] < 8:
+            goColor2.append(garages[on_cross_2[1]][3])
+            goColor2.append(garages[on_cross_2[1]][4])
+        else:
+            goColor2.append(garages[on_cross_2[1]][0])
+            goColor2.append(garages[on_cross_2[1]][1])
+      
+        goColor1.append(on_cross_2[0])
+        goColor2.append(on_cross_2[1])
+    elif on_line_2:
+        if on_line_2[0] < 8:
+            goColor1.append(garages[on_line_2[0]][3])
+            goColor1.append(garages[on_line_2[0]][4])
+        else:
+            goColor1.append(garages[on_line_2[0]][0])
+            goColor1.append(garages[on_line_2[0]][1])
+        if on_line_2[1] < 8:
+            goColor2.append(garages[on_line_2[1]][3])
+            goColor2.append(garages[on_line_2[1]][4])
+        else:
+            goColor2.append(garages[on_line_2[1]][0])
+            goColor2.append(garages[on_line_2[1]][1])
+
+        goColor1.append(on_line_2[0])
+        goColor2.append(on_line_2[1])
+    elif on_cross_1:
+        goColor1.append(garages[on_cross_1[0]][0])
+        goColor1.append(garages[on_cross_1[0]][1])
+        goColor2.append(garages[on_cross_1[1]][0])
+        goColor2.append(garages[on_cross_1[1]][1])
+
+        goColor1.append(on_cross_1[0])
+        goColor2.append(on_cross_1[1])
+
+    elif on_line_1:
+        goColor1.append(garages[on_line_1[0]][0])
+        goColor1.append(garages[on_line_1[0]][1])
+        goColor2.append(garages[on_line_1[1]][0])
+        goColor2.append(garages[on_line_1[1]][1])
+
+        goColor1.append(on_line_1[0])
+        goColor2.append(on_line_1[1])
+
+    gotoCross(9,'none', goColor1[0], goColor1[1])
+    GetDropCar(1)
+    if goColor1[2]:
+        delGarage(goColor1[2])
+    gotoCross(goColor1[0], goColor1[1], goColor2[0], goColor2[1])
+    GetDropCar(1,0) # 0 - не закрываем ворота
+    if goColor2[2]:
+        delGarage(goColor2[2])
+    ride_to_park(goColor2[0], goColor2[1])
 
 
-DRIVE_SPEED = 100
-PROPORTIONAL_GAIN = 1.2
+def from_park(a):
+    changeSpeed(350)
+    if a == 0:
+        riding_with_stop(350, 1.2, 1)
+        robot.turn(-90)
+    elif a == 1:
+        riding(350,200,0.8)
+        robot.reset()
+        while robot.distance() > -450:
+            robot.drive(-350,25)
+        robot.stop()
 
-
-tiny_font = Font(size=12)
-ev3.screen.set_font(tiny_font)
-
-
-garages = [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0] # 0 - закрыто, 1 - открыто
-
-
-list_colors = [0, 0, 0, 0, 0, 0] # 0 - пусто, 1 - красн, 2 - син, 3 - зелен
 
 
 def start(speed): # выезд на начальный перекресток
     pressed_button()
-    robot.turn(45)
-    robot.straight(speed)
-    robot.turn(45)
-    riding_with_stop(speed, 1)
-    riding_with_stop(speed, 1)
+    wait(300)
+    changeSpeed(300)
+    robot.reset()
+    robot.straight(-140)
+    changeSpeed(300)
+    while robot.distance() > -350:
+        robot.drive(-300, -90)
+    riding(350, 300, 1.2, 0)
+    riding_stop(350, 1.2, 0)
+    # pressed_button()
+    # robot.straight(-285)
+    # robot.turn(-90)
+    # robot.straight(-50)
+    # riding_with_stop(speed, 1)
+    # riding_with_stop(speed, 1)
 
 
 def cleanGarage(): # Зачистка нижней линии
     scan_1() # сканим
-    robot.turn(-90) # разворачиваемся на право
+    # robot.straight(-10)
+    robot.turn(90) # разворачиваемся на право
     GetDropCar(0) # забираем красную машинку
-    robot.turn(90) # встаем по линии
-    riding_with_stop(100, 1) # едем до перекрестка А
+    robot.turn(-90) # встаем по линии
+    riding_with_stop(350, 1, 1) # едем до перекрестка А
     
-    robot.turn(90) # все 4 строки для приезда к B0 
-    riding_with_stop(100, 1)
-    robot.turn(90)
-    riding_with_stop(100, 1)
+    robot.turn(-90) # все 4 строки для приезда к B0 
+    riding_with_stop(350, 1, 1)
+    robot.turn(-90)
+    riding_with_stop(350, 1, 1)
     
-    n = 0
+
     if Usensor.distance() < 120: # Проверка двух кабинок, выгрузка красной, забирание синей и зеленой машинок
-        garages[n] = 0
-        garages[1] = 1
-        garages[2] = 1
-        garages[3] = 1
-        riding_with_stop(100, 1)
-        robot_turn(-90)
-        GetDropCar(1)
+        delGarage(0)
+        riding_with_stop(350, 1, 0)
         robot.turn(90)
-        riding_with_stop(100, 1)
-        riding_with_stop(100, 1)
+        GetDropCar(1, 0)
+        delGarage(1)
+        robot.turn(-90)
+        riding_with_stop(350, 1, 0)
+        riding_with_stop(350, 1, 0)
     else:
-        robot_turn(-90)
-        GetDropCar(1)
+        delGarage(0)
         robot.turn(90)
-        scan_2()
-    robot.turn(-90)
-    GetDropCar(0) # Забирание синей
-    robot.turn(-90)
-    riding_with_stop(100, 1)
-    robot.turn(-90)
-    GetDropCar(3) # Забирание зеленой насквозь
+        GetDropCar(1, 0)
+        robot.turn(-90)
+        riding_with_stop(350, 1, 0)
+        if Usensor.distance() < 120: # Проверка двух кабинок, выгрузка красной, забирание синей и зеленой машинок
+            ev3.speaker.beep()
+            delGarage(1)
+        riding_with_stop(350, 1, 0)
+        if Usensor.distance() < 120: # Проверка двух кабинок, выгрузка красной, забирание синей и зеленой машинок
+            ev3.speaker.beep()
+            delGarage(2)
+        riding_with_stop(350, 1, 1)
     robot.turn(90)
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1) # Приезд на перекресток А
+    GetDropCar(0) # Забирание синей
+    robot.turn(90)
+    riding_with_stop(350, 1, 1)
+    robot.turn(90)
+    GetDropCar(3) # Забирание зеленой насквозь
+    robot.stra
+    robot.turn(-85)
+    riding_with_stop(350, 1, 0)
+    riding_with_stop(350, 1, 0)
+    riding_with_stop(350, 1, 0) # Приезд на перекресток А
 
 
 def scan_1(): # Скан нижней линии
     n = 4
-    while n < 8:
-        riding_with_stop(200, 1)
-        if Usensor.distance() < 140:
+    while n < 7:
+        riding_with_stop(350, 1, 0)
+        if Usensor.distance() < 120:
             #add to list 0
-            garages[n] = 0
+            delGarage(n)
             ev3.speaker.beep()
-        else:
-            #add to list 1
-            garages[n] = 1 
         n += 1
-    robot.turn(180)   
+    riding_with_stop(350, 1, 1)
+    if Usensor.distance() < 120:
+        #add to list 0
+        delGarage(n)
+        ev3.speaker.beep()
+    n += 1
+    if Usensor.distance() < 120:
+        ev3.speaker.beep()
+        robot.turn(-180)
+    elif Usensor.distance() > 120:
+        robot.turn(180)
+    # robot.straight(-10)   
     n = 11
-    while n > 7:
-        riding_with_stop(200, 1)
-        if Usensor.distance() < 140:
-            #add to list 0
-            garages[n] = 0
+    while n > 9:
+        if Usensor.distance() < 120:
+            delGarage(n)
             ev3.speaker.beep()
-        else:
-            #add to list 1
-            garages[n] = 1
-        n -= 1    
-    
-    ev3.screen.draw_text(0, 0, garages)
-    wait(10000)
-
-
-def scan_2(): # Скан верхней линии
-    n = 0
-    while n < 3:
-        riding_with_stop(200, 1)
-        if Usensor.distance() < 140:
-            #add to list 0
-            garages[n] = 0
-            ev3.speaker.beep()
-        else:
-            #add to list 1
-            garages[n] = 1 
-        n += 1
+        riding_with_stop(300, 1, 0)
+        n -= 1
+    riding_with_stop(350, 1, 1)
+  
 
 
 def dropOutside(): # Выгруз синей и зеленой машинок
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1) # Проезжаем два перекрестка
-    robot.turn(90) # Поворачиваемся вправо
-    riding(100, 180, 1) # Доезжаем до перекрестка L 
-    robot.turn(-45)
+    riding(350, 350, 1.2, 1)
+    riding_stop(350, 1.2, 1) # Проезжаем два перекрестка
+    robot.turn(-90) # Поворачиваемся вправо
+    riding_with_stop(350, 1.2, 1) # Доезжаем до перекрестка L 
+    robot.turn(58)
+    robot.straight(5)
     GetDropCar(2)
-    robot.turn(45) # Выгрузили зеленую машинку на М0
-    riding_with_stop(100, 1)
-    robot.turn(-45)
-    GetDropCar(2) # Выгрузили синюю машинку на М1
-    robot.turn(-135) # Развернулись
-    riding_with_stop(100, 1)
-    riding_with_stop(100, 1)
-    robot.turn(-90)
-    riding_with_stop(100, 1) # Приехали до перекрестка К
+    close()
+    robot.straight(20)
+    robot.turn(65) # Выгрузили зеленую машинку на М0
+    GetDropCar(2)
+    # robot.straight(20) # Выгрузили синюю машинку на М1
+    robot.turn(48) # Развернулись
+    riding(350, 550, 1.2, 1)
+    robot.turn(90)
+    ride_till_line()
+    robot.turn(90)
+    riding(200, 30, 1.2, 1)
+    riding_stop(200, 1.2, 1)
+    # Приехали до перекрестка К
 
     
-def riding(speed, distance, kof): # езда по линии на расстояние
+def riding(speed, distance, kof, stop=1): # езда по линии на расстояние
     robot.reset()
     distance = distance * -1
     while robot.distance() > distance:
         deviation = Rcolor.reflection() - Lcolor.reflection()
         turn_rate = kof * deviation
         robot.drive(-speed, turn_rate)
-    robot.stop()
+    if stop == 1:
+        robot.stop()
 
 def till_line(speed):
     robot.reset()
-    while robot.distance() > -20:
+    while robot.distance() > -30:
         robot.drive(speed,0)
-    robot.stop()
 
-def riding_stop(speed, kof):
+def riding_stop(speed, kof, stop=1):
     while True:
         deviation = Lcolor.reflection() - Rcolor.reflection()
         turn_rate = kof * - deviation
@@ -184,366 +326,129 @@ def riding_stop(speed, kof):
         if Rcolor.reflection() < grey or Lcolor.reflection() < grey: # !!!!!!!
             #robot.straight(-10)
             break
-    speed = speed / 2
+    if stop == 1:
+        speed = speed / 2
     till_line(-speed)
-    robot.stop()
+    if stop == 1:
+        robot.stop()
 
-def riding_with_stop(speed, kof): # езда по линии до перекрестка
-    mm = 250
-    riding(speed, mm, kof)
-    riding_stop(speed, 0.8)
+def riding_with_stop(speed, kof, stop=1): # езда по линии до перекрестка !!! riding_with_stop
+    mm = 200
+    riding(speed, mm, kof, stop)
+    riding_stop(speed, 0.8, stop)
     
 
+def getBatteries():
+    pass
 
+def changeTurnSpeed(speed):
+    robot.stop()
+    robot.settings(turn_rate=speed, turn_acceleration=speed/2)
 
+def changeSpeed(speed):
+    robot.stop()
+    robot.settings(speed)
 
 def open(): # открывает ковш
-    center_motor.run_time(400, 500)
+    center_motor.run_time(1000, 300)
 
 
-def open1():
-    center1_motor.run_time(-400, 500)
 
 
 def close(): # закрывает ковш
-    center_motor.run_time(-400, 500)
+    center_motor.run_time(-1000, 400)
 
 
-def close1():
-    center1_motor.run_time(400, 500)
+
 
 
 def LineCar(a): # забирает машины из линии
-    robot.turn(-90)
+    list_colors[0] = ''
+    list_colors[1] = ''
+    changeSpeed(300)
     if a == 0:
-        open()
+        # open()
         robot.reset()
-        robot.straight(200)
-        WhatAColor()
-        robot.straight(100)
-        WhatAColor()
-        robot.straight(50)
+        #robot.straight(-10)        
+        WhatAColor(1)
+        robot.straight(-120)
+        WhatAColor(0)
         close()
-        robot.straight(-robot.distance())
+        robot.straight(105)
     elif a == 1:
-        open()
+        # open()
         robot.reset()
-        robot.straight(400)
-        WhatAColor()
-        robot.straight(120)
-        WhatAColor()
-        robot.straight(50)
+        robot.straight(-240)
+        WhatAColor(1)
+        robot.straight(-120)
+        WhatAColor(0)
         close()
         robot.straight(-robot.distance())
-        WhatAColor()
+        #WhatAColor()
     elif a == 2:
-        open()
+        #open()
         robot.reset()
-        robot.straight(640)
-        WhatAColor()
-        robot.straight(100)
-        WhatAColor()
-        robot.straight(50)
+        robot.straight(-470)
+        WhatAColor(1)
+        robot.straight(-110)
+        WhatAColor(0)
         close()
         robot.straight(-robot.distance())
-        WhatAColor()
-    robot.turn(90)
-    riding_with_stop(100, 1)
-    
 
-def WhatAColor(): # определяем цвет машинок которые взяли
-    n = 0
+    robot.turn(-90)
+    riding(350, 230, 1.2, 1)
+    riding_stop(350, 1.2, 1)
+    ev3.screen.print(list_colors)
+
+def WhatAColor(n): # определяем цвет машинок которые взяли
+    #n = 0
     color = Mcolor.color()
     if color == Color.RED:
-        list_colors[n] = 1
+        list_colors[n] = 'red'
     elif color == Color.BLUE:
-        list_colors[n] = 2
+        list_colors[n] = 'blue'
     elif color == Color.GREEN:
-        list_colors[n] = 3
-    n += 1
+        list_colors[n] = 'green'
+    #n += 1
 
+def delGarage(n):
+    garages.pop(n)
 
-def GetDropCar(a): # забирает/ставит машины из/в гараж
-    if a == 0:
-        open()
-        riding(100, 100, 1)
+def GetDropCar(a,c=1): # забирает/ставит машины из/в гараж
+    changeSpeed(200)
+    if a == 0: 
+        # riding(200, 80, 1.2)
+        robot.straight(-100)
         close()
+        robot.straight(85)
+    elif a == 1:
+        # riding(50, 100, 1.2)
+        robot.straight(-120)
+        robot.stop()
+        open()
+        if c == 1:
+            robot.straight(80)
+            close()
+            robot.straight(50)
+        else:
+            robot.straight(130)
+    elif a == 2:
+        robot.straight(-115)
+        robot.stop()
+        open()
         robot.straight(100)
-    elif a == 1:
-        riding(100, 100, 1)
-        robot.stop()
-        open()
-        robot.straight(50)
-        close()
-        robot.straight(50)
-    elif a == 2:
-        riding(100, 250, 1)
-        robot.stop()
-        open()
-        robot.straight(50)
-        close()
-        robot.straight(200)
-    elif a == 3:
-        open()
-        riding(100, 75, 1)
-        close()
-        riding(-100, 125, 1)
-
-
-def go_to_cross(a, b, c, speed, kof):
-    if a == 0:
-        robot.turn(90)
-        riding_with_stop(speed, kof)
-        robot.turn(-90)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-90)
-                robot.turn(-90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-    elif a == 1:
-        robot.turn(90)
-        riding_with_stop(speed, kof)
-        robot.turn(-90)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-    
-    elif a == 2:
-        robot.turn(90)
-        riding_with_stop(speed, kof)
-        robot.turn(-90)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
 
     elif a == 3:
-        robot.turn(90)
-        riding_with_stop(speed, kof)
-        robot.turn(-90)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-                riding_with_stop(speed, kof)
-                robot.turn(90)
-            elif c == 1:
-                robot.stop()
-
-    elif a == 4:
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-
-    elif a == 5:
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-
-    elif a == 6:
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-
-    elif a == 7:
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        riding_with_stop(speed, kof)
-        if b == 0:
-            robot.turn(90)
-            GetDropCar(1)
-            robot.turn(-90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
-        elif b == 1:
-            robot.turn(-90)
-            GetDropCar(1)
-            robot.turn(90)
-            if c == 0:
-                robot.turn(-180)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                riding_with_stop(speed, kof)
-                robot.turn(180)
-            elif c == 1:
-                robot.stop()
+        open()
+        robot.straight(-490)
+        close()
+        
 
 
-def go_to_any_cross(n, speed=200, kof=0.8):
-    mm = (n - 1) * 300 + 250
+def go_to_any_cross(n, speed=200, kof=1.2):
+    mm = (n - 1) * 300 + 240
     riding(speed, mm, kof)
-    riding_with_stop(speed, kof)
+    riding_stop(speed, kof)
 
 
 def gotoCross(current_cross, current_direction, cross, direction): 
@@ -614,6 +519,20 @@ def gotoCross(current_cross, current_direction, cross, direction):
         robot.turn(-90)
 
 
+def ride_to_park(current_cross, current_direction):
+    if current_direction == "left":
+        robot.turn(90)
+    else:
+        robot.turn(-90)
+    if current_cross < 5:
+        go_to_any_cross(current_cross, 350)
+        robot.turn(90)
+        go_to_any_cross(1, 350)
+        robot.turn(-90)
+    else:
+        n = current_cross - 4
+        go_to_any_cross(n, 350)
+
 def pressed_button():
     while True:
         pressed = Button.CENTER in ev3.buttons.pressed()
@@ -649,27 +568,33 @@ def combos():
             garages[7] = 0
         
 
+def ride_till_line():
+    while Rcolor.reflection() > grey:
+        robot.drive(-350, 0)
+    till_line(300)
+    robot.stop()
+
+
 def left90():
     robot.turn(90)
 
 def right90():
     robot.turn(-90)
 
-# go_to_cross(4, 1, 1)
-# riding(500, 100, 0.6)
-# riding_with_stop(500, 0.3)
-# riding(500, 100, 0.6)
-# riding_with_stop(500, 0.3)
-# robot.turn(90)
-# robot.turn(90)
-# riding(500, 100, 0.6)
-# riding_with_stop(500, 0.3)
-# close()
-# close1()
-# robot.turn(90)
-# robot.turn(-90)
-# robot.turn(-90)
-
-go_to_cross(1, 0, 0, 250, 0.8)
 
 
+
+ev3.speaker.beep()
+pressed_button()
+start(350)
+cleanGarage()
+dropOutside()
+LineCar(0)
+combo(list_colors[0], list_colors[1])
+from_park(0)
+LineCar(1)
+combo(list_colors[0], list_colors[1])
+from_park(0)
+LineCar(2)
+combo(list_colors[0], list_colors[1])
+from_park(1)
